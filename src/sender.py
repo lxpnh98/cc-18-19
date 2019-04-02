@@ -1,9 +1,11 @@
 import threading
 import socket
 
+import packet
+
 UDP_IP = "127.0.0.1"
 UDP_PORT = 9999
-MESSAGE = b"Hello, world!"
+MESSAGE = bytearray(packet.Packet(123, 456, 2, (True, False, False, False)).encode(), 'iso-8859-15')
 
 class Sender(threading.Thread):
     def __init__(self):

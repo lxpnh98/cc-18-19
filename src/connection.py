@@ -7,6 +7,6 @@ class Connection():
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def recv(self, msg):
-        print("Received msg from ({},{}): {}".format(self.ip, self.port, msg.decode())) 
+        print("Received msg from ({},{}): {}".format(self.ip, self.port, msg.decode('iso-8859-15'))) 
         self.socket.sendto(b"Message received", (self.ip, self.port))
 

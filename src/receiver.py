@@ -2,6 +2,7 @@ import threading
 import socket
 
 from connection import Connection
+import packet
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 9999
@@ -24,7 +25,9 @@ class Receiver(threading.Thread):
                 print("New connection created")
             else:
                 print("Connection already exists.")
+            p = packet.decode(data, addr)
             connections[addr].recv(data)
+
 
 if __name__=='__main__':
     r = Receiver()
