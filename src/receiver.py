@@ -22,11 +22,8 @@ class Receiver(threading.Thread):
             data, addr = s.recvfrom(1024)
             if not addr in connections:
                 connections[addr] = Connection(addr)
-                print("New connection created")
-            else:
-                print("Connection already exists.")
             p = packet.decode(data, addr)
-            connections[addr].recv(data)
+            connections[addr].recv(p)
 
 
 if __name__=='__main__':

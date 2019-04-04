@@ -19,7 +19,7 @@ class Sender(threading.Thread):
 
         #receive
         data, addr = s.recvfrom(1024)
-        print("Received msg from ({},{}): {}".format(addr[0], addr[0], data.decode())) 
+        print("Received msg from ({},{}): {}".format(addr[0], addr[1], data.decode()))
 
 if __name__=='__main__':
     s = Sender()

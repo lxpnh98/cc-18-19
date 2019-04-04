@@ -1,10 +1,8 @@
-from enum import Enum
-
-class PacketType(Enum):
-    GET=0
-    PUT=1
-    DATA=2
-    CONTROL=3
+# Type constants
+GET=0
+PUT=1
+DATA=2
+CONTROL=3
 
 class Packet:
     def __init__(self, src_port, src_ip, packet_type, flags):
