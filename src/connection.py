@@ -1,12 +1,16 @@
 import socket
 
 class Connection():
-    def __init__(self, addr):
-        self.ip = addr[0]
-        self.port = addr[1]
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def __init__(self, socket, dest_addr, queue):
+        self.dest_addr = dest_addr
+        self.socket = socket
+        self.queue = queue
 
     def recv(self, packet):
-        print("Received msg from ({},{}): {}".format(self.ip, self.port, packet))
-        self.socket.sendto(b"Message received", (self.ip, self.port))
+        print("Received msg from {}: {}".format(self.socket.getsockname(), packet))
+        # send packet back for testing
+        self.queue.put((self, packet))
+
+    def get_dest(self):
+        return self.dest_addr
 

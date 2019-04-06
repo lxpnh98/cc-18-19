@@ -5,16 +5,15 @@ DATA=2
 CONTROL=3
 
 class Packet:
-    def __init__(self, src_port, src_ip, packet_type, flags):
-        self.src_port = src_port
+    def __init__(self, src_ip, src_port, packet_type, flags):
         self.src_ip = src_ip
+        self.src_port = src_port
         self.type = packet_type
         self.flags  = flags # (syn, fin, ack, nack)
 
     def __repr__(self):
         return ("Packet({}, {}, {}, {})"
-            .format(self.src_port, self.src_ip, self.type, self.flags))
-
+            .format(self.src_ip, self.src_port, self.type, self.flags))
 
     def encode(self):
         return chr(((self.type & 0x3) << 6) | # XX00 0000
