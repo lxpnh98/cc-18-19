@@ -1,3 +1,4 @@
+import sys
 import socket
 from queue import Queue
 
@@ -6,17 +7,23 @@ from sender import Sender
 from packet import Packet
 from connection import Connection
 
-UDP_IP = "127.0.0.1"
-UDP_PORT = 9999
+
+SRC_ADDR = ("127.0.0.1", int(sys.argv[1]))
+DST_ADDR = ("127.0.0.1", int(sys.argv[2]))
 
 q = Queue()
-r = Receiver((UDP_IP, UDP_PORT), q)
-s = Sender(q)
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind(SRC_ADDR)
+connections = {}
+
+r = Receiver(sock, q, connections)
+s = Sender(sock, q)
 r.start()
 s.start()
 
 # initial packet to be sent back and forth
-p = Packet("127.0.0.1", 5000, 0, (False, False, False, False))
-c = Connection(r.socket, ("127.0.0.1", 9999), q)
-q.put((c, p))
+if len(sys.argv) == 4:
+    c = Connection(DST_ADDR, q)
+    connections[DST_ADDR] = c
+    c.begin()
 
