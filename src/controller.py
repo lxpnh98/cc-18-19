@@ -26,6 +26,11 @@ class Controller:
         self.connections[self.dest_addr] = c
         c.begin()
 
+    def shutdown(self):
+        self.r.shutdown()
+        self.s.shutdown()
+        self.sock.close()
+
 if __name__=='__main__':
     SRC_ADDR = ("127.0.0.1", int(sys.argv[1]))
     DST_ADDR = ("127.0.0.1", int(sys.argv[2]))
