@@ -16,6 +16,7 @@ class Receiver(threading.Thread):
             data, addr = self.socket.recvfrom(1024)
             if not addr in self.connections:
                 self.connections[addr] = Connection(addr, self.queue)
+                self.connections[addr].start()
             p = packet.decode(data)
             print("Received msg from {}: {}".format(self.socket.getsockname(), p))
             self.connections[addr].recv(p)
