@@ -12,6 +12,7 @@ class Sender(threading.Thread):
     def run(self):
         while True:
             addr, packet = self.queue.get()
-            self.socket.sendto(bytearray(packet.encode(), 'iso-8859-15'), addr)
+            #self.socket.sendto(bytearray(packet.encode(), 'iso-8859-15'), addr)
+            self.socket.sendto(packet.encode(), addr)
             print("Sent packet {} to {}".format(packet, addr))
 
