@@ -24,8 +24,8 @@ class Controller:
     def start_connection(self):
         c = Connection(self.dest_addr, self.q)
         self.connections[self.dest_addr] = c
-        c.begin()
         c.start()
+        c.begin()
 
     def shutdown(self):
         self.r.shutdown()
