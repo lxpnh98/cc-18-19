@@ -24,7 +24,5 @@ while True:
         elif terms[0] == "set":
             if terms[1] in conf:
                 conf[terms[1]] = terms[2]
-        print(conf["dst_port"])
-        print(conf["src_port"])
     except IndexError:
         print("wrong number of arguments")
