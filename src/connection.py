@@ -60,10 +60,17 @@ class Connection():
 
     def send(self):
         while True:
-            pass
+            for id in self.files.copy():
+                f = self.files[id]
+                if f.operation == packet.GET:
+                    f.send_next(self.dest_addr, self.queue)
 
     def get_dest(self):
         return self.dest_addr
+
+    def get_file(self, path):
+        p = packet.Packet(packet.GET, (False,)*4, data=path)
+        self.out_queue.put((self.dest_addr, p))
 
     def init(self, p):
         self.initialized = True

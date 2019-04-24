@@ -26,6 +26,7 @@ class Controller:
         self.connections[self.dest_addr] = c
         c.start()
         c.begin()
+        return c
 
     def shutdown(self):
         self.r.shutdown()
