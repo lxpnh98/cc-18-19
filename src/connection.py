@@ -15,7 +15,7 @@ class Connection():
         self.first = False
         self.acknowledged = 0
         self.timeout = None
-        self.file_num = 1
+        self.file_id = 1
         self.files = {}
 
     def __repr__(self):
@@ -54,16 +54,18 @@ class Connection():
         self.timeout.start()
 
     def create_file(self, operation, path):
-        new_file_num = self.file_num
-        self.file_num += 1
-        self.files[new_file_num] = file.File(operation, path)
+        new_file_id = self.file_id
+        self.file_id += 1
+        self.files[new_file_id] = file.File(new_file_id, operation, path)
 
     def send(self):
         while True:
             for id in self.files.copy():
                 f = self.files[id]
                 if f.operation == packet.GET:
-                    f.send_next(self.dest_addr, self.queue)
+                    sent = f.send_next(self.dest_addr, self.out_queue)
+                    if sent == 0: # envio completo 
+                        self.files.pop(id)
 
     def get_dest(self):
         return self.dest_addr
