@@ -27,6 +27,6 @@ while True:
                 conf[terms[1]] = terms[2]
         elif terms[0] == "get":
             if conn:
-                conn.get_file(terms[1])
+                conn.get_file(terms[1], terms[2])
     except IndexError:
         print("wrong number of arguments")

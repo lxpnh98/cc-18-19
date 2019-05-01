@@ -11,7 +11,7 @@ ACK=2
 NACK=3
 
 class Packet:
-    def __init__(self, packet_type=CONTROL, flags=(False,)*4, file_id=0, seq_num=0, ack_num=0, data=""):
+    def __init__(self, packet_type=CONTROL, flags=(False,False,True,False), file_id=0, seq_num=0, ack_num=0, data=""):
         self.type = packet_type
         self.flags = flags # (syn, fin, ack, nack)
         self.file_id = file_id
