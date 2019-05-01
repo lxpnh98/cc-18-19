@@ -57,10 +57,11 @@ class Connection():
                 f = self.files[id]
                 if f.operation == packet.GET:
                     d = f.get_next_chunk()
-                    p = packet.Packet(packet.DATA, file_id=f.file_id, data=d)
-                    self.send_packet(p)
-                    if len(d) == 0: # envio completo 
-                        self.files.pop(id)
+                    if len(d) != 0:
+                        p = packet.Packet(packet.DATA, file_id=f.file_id, data=d)
+                        self.send_packet(p)
+                    else:
+                        pass # TODO: remover se já tiver recebido todos os acks
 
     def send_packet(self, p):
         if p.seq_num == 0:
@@ -69,6 +70,7 @@ class Connection():
         self.out_queue.put((self.dest_addr, p))
         t = threading.Timer(5.0, self.send_packet, (p,))
         self.files[p.file_id].packets_sending.append((p, t))
+        self.files[p.file_id].update_keep_alive_timer(self)
         t.start()
 
     def get_dest(self):
@@ -83,5 +85,6 @@ class Connection():
 
     def begin(self):
         self.first = True
-        p = packet.Packet(packet.CONTROL, (True, False, False, False))
+        p = packet.Packet(flags=(True, False, False, False))
         self.send_packet(p)
+

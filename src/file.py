@@ -1,3 +1,5 @@
+import threading
+
 import packet
 
 class File:
@@ -8,6 +10,7 @@ class File:
         self.ack_num = 0
         self.packets_sending = []
         self.acks_to_send = []
+        self.keep_alive_timer = None
 
         if file_id != 0:
             if operation == packet.GET:
@@ -46,4 +49,11 @@ class File:
             if p.seq_num <= ack_num:
                 t.cancel()
                 self.packets_sending.remove((p, t))
+
+    def update_keep_alive_timer(self, conn):
+        if self.keep_alive_timer:
+            self.keep_alive_timer.cancel()
+        p = packet.Packet(flags=(False, False, True, False), file_id=self.file_id, data="test")
+        self.keep_alive_timer = threading.Timer(5.0, conn.send_packet, (p,))
+        self.keep_alive_timer.start()
 
