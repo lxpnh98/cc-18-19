@@ -58,6 +58,9 @@ class Connection():
                 if processed:
                     continue
 
+            if p.type == packet.DATA:
+                self.files[p.file_id].write_chunk(p.seq_num, p.data)
+
             if (p.flags[packet.ACK]):
                 self.files[p.file_id].ack_recv(p.ack_num)
             if (p.flags[packet.SYN]):
@@ -72,6 +75,9 @@ class Connection():
         args = o.split(":")
         if args[0] == "link_file_id":
             self.file_id_table[int(args[1])] = p.file_id
+        native_id = self.file_id_table[p.file_id]
+        if args[0] == "end_of_file":
+            self.files[native_id].set_end_of_file(int(args[1]))
 
     def create_file(self, operation, path):
         id = self.file_id
@@ -83,13 +89,18 @@ class Connection():
         while True:
             for id in self.files.copy():
                 f = self.files[id]
-                if f.operation == packet.GET:
+                if f.closed == True:
+                    if f.finished(): 
+                        pass#self.files.pop(id)
+                elif f.operation == packet.GET:
                     d = f.get_next_chunk()
                     if len(d) != 0:
-                        p = packet.Packet(packet.DATA, file_id=f.file_id, data=d)
-                        self.send_packet(p)
+                        p = packet.Packet(packet_type=packet.DATA, file_id=f.file_id, data=d)
                     else:
-                        pass # TODO: remover se já tiver recebido todos os acks
+                        p = packet.Packet(packet_type=packet.CONTROL, file_id=f.file_id, data="end_of_file:{}".format(f.seq_num-1))
+                        f.close()
+                    self.send_packet(p)
+                        
 
     def send_packet(self, p, pure_ack=False):
         if p.seq_num == 0 and not pure_ack:
@@ -99,7 +110,8 @@ class Connection():
         self.out_queue.put((self.dest_addr, p))
         t = threading.Timer(5.0, self.send_packet, (p,))
         self.files[p.file_id].packets_sending.append((p, t))
-        self.files[p.file_id].update_keep_alive_timer(self)
+        if not self.files[p.file_id].update_keep_alive_timer(self) and self.files[p.file_id].finished():
+            pass#self.files.pop(p.file_id)
         t.start()
 
     def get_dest(self):

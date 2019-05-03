@@ -17,6 +17,10 @@ class File:
         self.acks_to_send = []
         self.keep_alive_timer = None
 
+        self.eof = None
+        self.chunk_num = 1
+        self.closed = False
+
         if file_id != 0:
             if operation == GET or operation == PUT_REQUEST:
                 mode = "r"
@@ -42,6 +46,11 @@ class File:
         else:
             raise Exception("file not opened")
 
+    def write_chunk(self, seq_num, chunk):
+        if self.file and self.operation in [PUT, GET_REQUEST]:
+            self.file.write(chunk)
+            self.chunk_num += 1
+
     def ack_send(self, ack_num):
         if self.ack_num >= ack_num:
             return True # already processed
@@ -63,7 +72,21 @@ class File:
     def update_keep_alive_timer(self, conn):
         if self.keep_alive_timer:
             self.keep_alive_timer.cancel()
+        print("chunk {} eof {}".format(self.chunk_num, self.eof))
+        if self.eof and self.chunk_num == self.eof:
+            self.close()
         p = packet.Packet(flags=(False, False, True, False), file_id=self.file_id, data="test")
         self.keep_alive_timer = threading.Timer(5.0, conn.send_packet, (p,), {"pure_ack":True})
         self.keep_alive_timer.start()
 
+    def set_end_of_file(self, seq_num):
+        self.eof = seq_num
+
+    def close(self):
+        self.file.close()
+        if self.keep_alive_timer:
+            self.keep_alive_timer.cancel()
+        self.closed = True
+
+    def finished(self):
+        return not self.packets_sending and not self.acks_to_send
