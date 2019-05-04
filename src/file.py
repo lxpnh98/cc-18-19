@@ -18,6 +18,7 @@ class File:
         self.keep_alive_timer = None
 
         self.eof = None
+        self.chunks_to_write = []
         self.chunk_num = 1
         self.closed = False
 
@@ -48,8 +49,17 @@ class File:
 
     def write_chunk(self, seq_num, chunk):
         if self.file and self.operation in [PUT, GET_REQUEST]:
-            self.file.write(chunk)
-            self.chunk_num += 1
+            self.chunks_to_write.append((seq_num, chunk))
+            for s, c in sorted(self.chunks_to_write, key=lambda x: x[0]):
+                print("chunk_seq_num: {}".format(s))
+                if s == self.chunk_num + 1:
+                    self.file.write(c)
+                    self.chunk_num += 1
+                    self.chunks_to_write.remove((s, c))
+                elif s <= self.chunk_num:
+                    self.chunks_to_write.remove((s, c))
+                else:
+                    break
 
     def ack_send(self, ack_num):
         if self.ack_num >= ack_num:
