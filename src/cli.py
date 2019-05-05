@@ -34,5 +34,8 @@ while True:
         elif terms[0] == "get":
             if conn:
                 conn.get_file(terms[1], terms[2])
+        elif terms[0] == "put":
+            if conn:
+                conn.put_file(terms[1], terms[2])
     except IndexError:
         print("too few arguments")

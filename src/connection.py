@@ -45,6 +45,16 @@ class Connection():
                                                 flags=(False, False, True, False),
                                                 file_id=id, data="link_file_id:{}".format(p.file_id))
                     self.send_packet(link_packet)
+            elif p.type == packet.PUT:
+                if p.data == "":
+                    print("no file")
+                elif p.file_id not in self.file_id_table:
+                    id = self.create_file(file.PUT, p.data)
+                    self.file_id_table[p.file_id] = id
+                    link_packet = packet.Packet(packet_type=packet.CONTROL,
+                                                flags=(False, False, True, False),
+                                                file_id=id, data="link_file_id:{}".format(p.file_id))
+                    self.send_packet(link_packet)
 
             if p.type == packet.CONTROL:
                 options = p.data.split("\n")
@@ -92,7 +102,7 @@ class Connection():
                 if f.closed == True:
                     if f.finished(): 
                         pass#self.files.pop(id)
-                elif f.operation == packet.GET:
+                elif f.operation == file.GET or f.operation == file.PUT_REQUEST:
                     d = f.get_next_chunk()
                     if len(d) != 0:
                         p = packet.Packet(packet_type=packet.DATA, file_id=f.file_id, data=d)
@@ -120,6 +130,11 @@ class Connection():
     def get_file(self, read_path, write_path):
         id = self.create_file(file.GET_REQUEST, write_path)
         p = packet.Packet(packet.GET, (False,)*4, file_id=id, data=read_path)
+        self.send_packet(p)
+
+    def put_file(self, read_path, write_path):
+        id = self.create_file(file.PUT_REQUEST, read_path)
+        p = packet.Packet(packet.PUT, (False,)*4, file_id=id, data=write_path)
         self.send_packet(p)
 
     def init(self, p):
