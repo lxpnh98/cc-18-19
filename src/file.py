@@ -1,4 +1,5 @@
 import threading
+import time
 
 import packet
 
@@ -29,7 +30,7 @@ class File:
                 mode = "w"
             else:
                 raise Exception("unknown operation {}".format(operation))
-            self.file = open(path, mode)
+            self.file = open(path, mode, encoding='iso-8859-15')
         else:
             self.file = None
 
@@ -74,19 +75,25 @@ class File:
         return False
 
     def ack_recv(self, ack_num):
-        for p, t in self.packets_sending[:]:
+        current_timestamp = time.time()
+        rtt = float('inf')
+        for p, t, timestamp in self.packets_sending[:]:
             if p.seq_num <= ack_num:
                 t.cancel()
-                self.packets_sending.remove((p, t))
+                rtt = min(rtt, current_timestamp - timestamp)
+                self.packets_sending.remove((p, t, timestamp))
+        return rtt
 
-    def update_keep_alive_timer(self, conn):
+    def cancel_keep_alive_timer(self):
         if self.keep_alive_timer:
             self.keep_alive_timer.cancel()
         print("chunk {} eof {}".format(self.chunk_num, self.eof))
         if self.eof and self.chunk_num == self.eof:
             self.close()
+
+    def new_keep_alive_timer(self, conn):
         p = packet.Packet(flags=(False, False, True, False), file_id=self.file_id, data="test")
-        self.keep_alive_timer = threading.Timer(5.0, conn.send_packet, (p,), {"pure_ack":True})
+        self.keep_alive_timer = threading.Timer(conn.rto, conn.send_packet, (p,), {"pure_ack":True})
         self.keep_alive_timer.start()
 
     def set_end_of_file(self, seq_num):
