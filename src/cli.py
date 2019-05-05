@@ -21,12 +21,18 @@ while True:
             cc = Controller((conf["src_ip"],int(conf["src_port"])), (conf["dst_ip"],int(conf["dst_port"])))
         if terms[0] == "connect":
             if cc:
-                conn = cc.start_connection()
+                conn = cc.get_connection((conf["dst_ip"],int(conf["dst_port"])))
+                if not conn:
+                    conn = cc.start_connection()
+            else:
+                print("need to 'start' first")
         elif terms[0] == "set":
             if terms[1] in conf:
                 conf[terms[1]] = terms[2]
+            else:
+                print("{} not a valid setting".format(terms[1]))
         elif terms[0] == "get":
             if conn:
                 conn.get_file(terms[1], terms[2])
     except IndexError:
-        print("wrong number of arguments")
+        print("too few arguments")

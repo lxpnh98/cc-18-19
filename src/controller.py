@@ -28,6 +28,12 @@ class Controller:
         c.begin()
         return c
 
+    def get_connection(self, dst_addr):
+        if dst_addr in self.connections:
+            return self.connections[dst_addr]
+        else:
+            return None
+
     def shutdown(self):
         self.r.shutdown()
         self.s.shutdown()
