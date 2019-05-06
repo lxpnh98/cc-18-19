@@ -24,7 +24,7 @@ class Packet:
 
     def __repr__(self):
         return ("Packet({}, {}, {}, {}, {}, \"{}\")"
-            .format(self.type, self.flags, self.file_id, self.seq_num, self.ack_num, self.data))
+            .format(self.type, self.flags, self.file_id, self.seq_num, self.ack_num, self.data if len(self.data) < 20 else "(...)" ))
 
     def encode(self):
         return (bytes((chr(((self.type & 0x3) << 6) | # XX00 0000

@@ -25,6 +25,7 @@ class Controller:
         c = Connection(self.dest_addr, self.q)
         self.connections[self.dest_addr] = c
         c.start()
+        c.init()
         c.begin()
         return c
 

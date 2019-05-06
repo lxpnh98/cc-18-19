@@ -79,7 +79,7 @@ class File:
         rtt = float('inf')
         for p, t, timestamp in self.packets_sending[:]:
             if p.seq_num <= ack_num:
-                t.cancel()
+                if t: t.cancel()
                 rtt = min(rtt, current_timestamp - timestamp)
                 self.packets_sending.remove((p, t, timestamp))
         return rtt
@@ -87,7 +87,7 @@ class File:
     def cancel_keep_alive_timer(self):
         if self.keep_alive_timer:
             self.keep_alive_timer.cancel()
-        print("chunk {} eof {}".format(self.chunk_num, self.eof))
+        print("file_id {} chunk {} eof {}".format(self.file_id, self.chunk_num, self.eof))
         if self.eof and self.chunk_num == self.eof:
             self.close()
 

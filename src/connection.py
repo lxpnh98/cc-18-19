@@ -71,10 +71,14 @@ class Connection():
 
             p.file_id = self.file_id_table[p.file_id]
 
+            print("file_id {} seq_num {} type {}".format(p.file_id, p.seq_num, p.type))
+
             if p.seq_num != 0:
                 processed = self.files[p.file_id].ack_send(p.seq_num)
                 if processed:
                     continue
+
+            print("got here")
 
             if p.type == packet.DATA:
                 self.files[p.file_id].write_chunk(p.seq_num, p.data)
@@ -87,7 +91,7 @@ class Connection():
                     self.rto = max(1, self.rtt + K * self.rtt_var)
                 print("rtt: {}; rto: {}".format(self.rtt, self.rto))
             if (p.flags[packet.SYN]):
-                self.init(p)
+                self.init()
                 if (self.first == False):
                     p2 = packet.Packet(flags=(True, False, True, False)) # SYN & ACK
                 else:
@@ -105,6 +109,7 @@ class Connection():
     def create_file(self, operation, path):
         id = self.file_id
         self.files[id] = file.File(id, operation, path)
+        self.files[id].new_keep_alive_timer(self)
         self.file_id += 1
         return id
 
@@ -123,20 +128,22 @@ class Connection():
                         p = packet.Packet(packet_type=packet.CONTROL, file_id=f.file_id, data="end_of_file:{}".format(f.seq_num-1))
                         f.close()
                     self.send_packet(p)
-                        
 
     def send_packet(self, p, pure_ack=False):
+        print(self.files)
         if p.seq_num == 0 and not pure_ack:
             p.seq_num = self.files[p.file_id].get_next_seq_num()
         if p.flags[packet.ACK]:
             p.ack_num = self.files[p.file_id].get_ack_num()
-        self.out_queue.put((self.dest_addr, p))
-        t = threading.Timer(self.rto, self.send_packet, (p,))
-        self.files[p.file_id].packets_sending.append((p, t, time.time()))
-        self.files[p.file_id].cancel_keep_alive_timer()
-        if not pure_ack:
+            self.files[p.file_id].cancel_keep_alive_timer()
             self.files[p.file_id].new_keep_alive_timer(self)
-        t.start()
+        self.out_queue.put((self.dest_addr, p))
+        if not pure_ack:
+            t = threading.Timer(self.rto, self.send_packet, (p,))
+            t.start()
+        else:
+            t = None
+        self.files[p.file_id].packets_sending.append((p, t, time.time()))
 
     def get_dest(self):
         return self.dest_addr
@@ -151,8 +158,9 @@ class Connection():
         p = packet.Packet(packet.PUT, (False,)*4, file_id=id, data=write_path)
         self.send_packet(p)
 
-    def init(self, p):
+    def init(self):
         self.first_timestamp = time.time()
+        self.files[0].new_keep_alive_timer(self)
         self.initialized = True
 
     def begin(self):
