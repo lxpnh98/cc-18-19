@@ -52,6 +52,9 @@ class File:
         if self.file and self.operation in [PUT, GET_REQUEST]:
             self.chunks_to_write.append((seq_num, chunk))
             for s, c in sorted(self.chunks_to_write, key=lambda x: x[0]):
+                if c == "":
+                    self.close()
+                    break
                 print("chunk_seq_num: {}".format(s))
                 if s == self.chunk_num + 1:
                     self.file.write(c)
@@ -76,13 +79,15 @@ class File:
 
     def ack_recv(self, ack_num):
         current_timestamp = time.time()
+        count = 0
         rtt = float('inf')
         for p, t, timestamp in self.packets_sending[:]:
             if p.seq_num <= ack_num:
+                count += 1
                 if t: t.cancel()
                 rtt = min(rtt, current_timestamp - timestamp)
                 self.packets_sending.remove((p, t, timestamp))
-        return rtt
+        return rtt, count
 
     def cancel_keep_alive_timer(self):
         if self.keep_alive_timer:

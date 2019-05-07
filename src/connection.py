@@ -101,8 +101,8 @@ class Connection():
             self.files[p.file_id].write_chunk(p.seq_num, p.data)
 
         if (p.flags[packet.ACK]):
-            self.dec_curr_window_size()
-            rtt = self.files[p.file_id].ack_recv(p.ack_num)
+            rtt, count = self.files[p.file_id].ack_recv(p.ack_num)
+            self.dec_curr_window_size(count)
             if rtt < float('inf'):
                 self.rtt = (1-ALPHA)*self.rtt + ALPHA*rtt
                 self.rtt_var = (1 - BETA) * self.rtt_var + BETA * abs(self.rtt - rtt)
@@ -140,10 +140,8 @@ class Connection():
                         pass#self.files.pop(id)
                 elif f.operation == file.GET or f.operation == file.PUT_REQUEST:
                     d = f.get_next_chunk()
-                    if len(d) != 0:
-                        p = packet.Packet(packet_type=packet.DATA, file_id=f.file_id, data=d)
-                    else:
-                        p = packet.Packet(packet_type=packet.CONTROL, file_id=f.file_id, data="end_of_file:{}".format(f.seq_num-1))
+                    p = packet.Packet(packet_type=packet.DATA, file_id=f.file_id, data=d)
+                    if len(d) == 0:
                         f.close()
                     self.send_packet(p)
 
@@ -155,11 +153,11 @@ class Connection():
         print(self.files)
         if p.seq_num == 0 and not pure_ack:
             p.seq_num = self.files[p.file_id].get_next_seq_num()
+            self.inc_curr_window_size()
         if p.flags[packet.ACK]:
             p.ack_num = self.files[p.file_id].get_ack_num()
             self.files[p.file_id].cancel_keep_alive_timer()
             self.files[p.file_id].new_keep_alive_timer(self)
-        self.inc_curr_window_size()
         self.out_queue.put((self.dest_addr, p))
         if not pure_ack:
             t = threading.Timer(self.rto, self.send_packet, (p,))
@@ -196,8 +194,8 @@ class Connection():
         self.curr_window_size += 1
         self.window_cond.release()
 
-    def dec_curr_window_size(self):
+    def dec_curr_window_size(self, count=1):
         self.window_cond.acquire()
-        self.curr_window_size -= 1
+        self.curr_window_size -= count
         self.window_cond.notify()
         self.window_cond.release()
