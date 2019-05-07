@@ -11,7 +11,7 @@ ACK=2
 NACK=3
 
 class Packet:
-    def __init__(self, packet_type=CONTROL, flags=(False,False,True,False), file_id=0, seq_num=0, ack_num=0, data=""):
+    def __init__(self, packet_type=CONTROL, flags=(False,False,True,False,False), file_id=0, seq_num=0, ack_num=0, data=""):
         self.type = packet_type
         self.flags = flags # (syn, fin, ack, nack)
         self.file_id = file_id
@@ -31,7 +31,8 @@ class Packet:
                     (self.flags[0] << 5 |     # 00X0 0000
                      self.flags[1] << 4 |     # 000X 0000
                      self.flags[2] << 3 |     # 0000 X000
-                     self.flags[3] << 2))     # 0000 0X00
+                     self.flags[3] << 2 |     # 0000 0X00
+                     self.flags[4] << 1))     # 0000 00X0
                 + chr(self.file_id & 0xff)), 'iso-8859-15')
                 + self.seq_num.to_bytes(4, byteorder='big')
                 + self.ack_num.to_bytes(4, byteorder='big')
@@ -45,18 +46,19 @@ def extract(char, rshift, mask):
 
 def decode(data):
     packet_type = extract(data[0], 6, 0x3)    # XX00 0000
-    flags =       extract(data[0], 2, 0xf)
-    syn = flags  & 0x8                        # 00X0 0000
-    fin = flags  & 0x4                        # 000X 0000
-    ack = flags  & 0x2                        # 0000 X000
-    nack = flags & 0x1                        # 0000 0X00
+    flags =       extract(data[0], 1, 0x1f)
+    syn = flags  & 0x10                       # 00X0 0000
+    fin = flags  & 0x8                        # 000X 0000
+    ack = flags  & 0x4                        # 0000 X000
+    nack = flags & 0x2                        # 0000 0X00
+    error = flags & 0x1                       # 0000 00X0
     file_id = data[1]
     seq_num = data[2:6]
     ack_num = data[6:10]
     checksum = data[10:12]
     payload = data[12:].decode('iso-8859-15')
     return Packet(packet_type,
-                  (bool(syn), bool(fin), bool(ack), bool(nack)),
+                  (bool(syn), bool(fin), bool(ack), bool(nack), bool(error)),
                   file_id, int.from_bytes(seq_num, byteorder='big'), int.from_bytes(ack_num, byteorder='big'),
                   payload)
 

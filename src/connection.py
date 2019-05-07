@@ -56,7 +56,7 @@ class Connection():
                     id = self.create_file(file.GET, p.data)
                     self.file_id_table[p.file_id] = id
                     link_packet = packet.Packet(packet_type=packet.CONTROL,
-                                                flags=(False, False, True, False),
+                                                flags=(False, False, True, False, False),
                                                 file_id=id, data="link_file_id:{}".format(p.file_id))
                     self.send_packet(link_packet)
             elif p.type == packet.PUT:
@@ -66,7 +66,7 @@ class Connection():
                     id = self.create_file(file.PUT, p.data)
                     self.file_id_table[p.file_id] = id
                     link_packet = packet.Packet(packet_type=packet.CONTROL,
-                                                flags=(False, False, True, False),
+                                                flags=(False, False, True, False, False),
                                                 file_id=id, data="link_file_id:{}".format(p.file_id))
                     self.send_packet(link_packet)
 
@@ -111,9 +111,9 @@ class Connection():
         if (p.flags[packet.SYN]):
             self.init()
             if (self.first == False):
-                p2 = packet.Packet(flags=(True, False, True, False)) # SYN & ACK
+                p2 = packet.Packet(flags=(True, False, True, False, False)) # SYN & ACK
             else:
-                p2 = packet.Packet(flags=(False, False, True, False)) # ACK
+                p2 = packet.Packet(flags=(False, False, True, False, False)) # ACK
             self.send_packet(p2)
 
     def process_option(self, p, o):
@@ -171,12 +171,12 @@ class Connection():
 
     def get_file(self, read_path, write_path):
         id = self.create_file(file.GET_REQUEST, write_path)
-        p = packet.Packet(packet.GET, (False,)*4, file_id=id, data=read_path)
+        p = packet.Packet(packet.GET, (False,)*5, file_id=id, data=read_path)
         self.send_packet(p)
 
     def put_file(self, read_path, write_path):
         id = self.create_file(file.PUT_REQUEST, read_path)
-        p = packet.Packet(packet.PUT, (False,)*4, file_id=id, data=write_path)
+        p = packet.Packet(packet.PUT, (False,)*5, file_id=id, data=write_path)
         self.send_packet(p)
 
     def init(self):
@@ -186,7 +186,7 @@ class Connection():
 
     def begin(self):
         self.first = True
-        p = packet.Packet(flags=(True, False, False, False))
+        p = packet.Packet(flags=(True, False, False, False, False))
         self.send_packet(p)
 
     def inc_curr_window_size(self):

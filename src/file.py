@@ -98,7 +98,7 @@ class File:
             self.close()
 
     def new_keep_alive_timer(self, conn):
-        p = packet.Packet(flags=(False, False, True, False), file_id=self.file_id, data="test")
+        p = packet.Packet(flags=(False, False, True, False, False), file_id=self.file_id, data="test")
         self.keep_alive_timer = threading.Timer(conn.rto, conn.send_packet, (p,), {"pure_ack":True})
         self.keep_alive_timer.start()
 
