@@ -54,6 +54,7 @@ class File:
             for s, c in sorted(self.chunks_to_write, key=lambda x: x[0]):
                 if c == "":
                     self.close()
+                    self.set_end_of_file(s-1)
                     break
                 print("chunk_seq_num: {}".format(s))
                 if s == self.chunk_num + 1:
@@ -105,6 +106,9 @@ class File:
         self.eof = seq_num
 
     def close(self):
+        for p, t, timestamp in self.packets_sending[:]:
+            if t:
+                t.cancel()
         self.file.close()
         if self.keep_alive_timer:
             self.keep_alive_timer.cancel()
