@@ -1,5 +1,6 @@
 import threading
 import time
+import os
 
 import packet
 
@@ -9,7 +10,7 @@ GET_REQUEST=2
 PUT_REQUEST=3
 
 class File:
-    def __init__(self, file_id, operation, path):
+    def __init__(self, conn, file_id, operation, path):
         self.file_id = file_id
         self.operation = operation
         self.seq_num = 1
@@ -17,6 +18,7 @@ class File:
         self.packets_sending = []
         self.acks_to_send = []
         self.keep_alive_timer = None
+        self.new_keep_alive_timer(conn)
 
         self.eof = None
         self.chunks_to_write = []
@@ -65,6 +67,8 @@ class File:
                     self.chunks_to_write.remove((s, c))
                 else:
                     break
+            self.file.flush()
+            os.fsync(self.file.fileno())
 
     def ack_send(self, ack_num):
         if self.ack_num >= ack_num:

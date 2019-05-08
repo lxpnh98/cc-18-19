@@ -18,9 +18,6 @@ class Connection():
         self.initialized = False
         self.first = False
 
-        self.file_id = 1
-        self.files = { 0 : file.File(0, None, None) }
-
         # foreign file_id -> native file_id
         self.file_id_table = {0 : 0}
 
@@ -30,6 +27,9 @@ class Connection():
         self.rtt = 2
         self.rtt_var = self.rtt / 2
         self.rto = 1
+
+        self.file_id = 1
+        self.files = { 0 : file.File(self, 0, None, None) }
 
         self.window_cond = threading.Condition()
         self.max_window_size = 10
@@ -102,7 +102,11 @@ class Connection():
 
         if (p.flags[packet.ACK]):
             rtt, count = self.files[p.file_id].ack_recv(p.ack_num)
-            self.dec_curr_window_size(count)
+            #self.window_cond.acquire()
+            #while self.curr_window_size - count <= 0:
+            #    self.window_cond.wait()
+            #self.window_cond.release()
+            #self.dec_curr_window_size(count)
             if rtt < float('inf'):
                 self.rtt = (1-ALPHA)*self.rtt + ALPHA*rtt
                 self.rtt_var = (1 - BETA) * self.rtt_var + BETA * abs(self.rtt - rtt)
@@ -126,7 +130,7 @@ class Connection():
 
     def create_file(self, operation, path):
         id = self.file_id
-        self.files[id] = file.File(id, operation, path)
+        self.files[id] = file.File(self, id, operation, path)
         self.files[id].new_keep_alive_timer(self)
         self.file_id += 1
         return id
@@ -143,17 +147,20 @@ class Connection():
                     p = packet.Packet(packet_type=packet.DATA, file_id=f.file_id, data=d)
                     if len(d) == 0:
                         f.close()
+                    while len(f.packets_sending) >= self.max_window_size:
+                        pass
                     self.send_packet(p)
 
     def send_packet(self, p, pure_ack=False):
-        self.window_cond.acquire()
-        while self.curr_window_size >= self.max_window_size:
-            self.window_cond.wait()
-        self.window_cond.release()
+       # self.window_cond.acquire()
+       # print("\n count=%d\n",self.curr_window_size)
+       # while self.curr_window_size >= self.max_window_size:
+       #     self.window_cond.wait()
+       # self.window_cond.release()
         print(self.files)
         if p.seq_num == 0 and not pure_ack:
             p.seq_num = self.files[p.file_id].get_next_seq_num()
-            self.inc_curr_window_size()
+         #   self.inc_curr_window_size()
         if p.flags[packet.ACK]:
             p.ack_num = self.files[p.file_id].get_ack_num()
             self.files[p.file_id].cancel_keep_alive_timer()
