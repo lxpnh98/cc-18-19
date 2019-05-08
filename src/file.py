@@ -58,7 +58,7 @@ class File:
             for s, c in sorted(self.chunks_to_write, key=lambda x: x[0]):
                 if c == "":
                     self.close()
-                    self.set_end_of_file(s-1)
+                    self.set_end_of_file(s)
                     break
                 print("chunk_seq_num: {}".format(s))
                 if s == self.chunk_num + 1:
@@ -100,7 +100,7 @@ class File:
         if self.keep_alive_timer:
             self.keep_alive_timer.cancel()
         print("file_id {} chunk {} eof {}".format(self.file_id, self.chunk_num, self.eof))
-        if self.eof and self.chunk_num == self.eof:
+        if not self.closed and self.eof and self.chunk_num == self.eof - 1:
             self.close()
 
     def new_keep_alive_timer(self, conn):
@@ -116,9 +116,9 @@ class File:
             if t:
                 t.cancel()
         self.file.close()
+        self.closed = True
         if self.keep_alive_timer:
             self.keep_alive_timer.cancel()
-        self.closed = True
 
     def finished(self):
         return not self.packets_sending and not self.acks_to_send

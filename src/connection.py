@@ -32,7 +32,7 @@ class Connection():
         self.files = { 0 : file.File(self, 0, None, None) }
 
         self.window_cond = threading.Condition()
-        self.max_window_size = 10
+        self.max_window_size = 50
         self.curr_window_size = 0
 
     def __repr__(self):
@@ -98,7 +98,12 @@ class Connection():
         print("got here")
 
         if p.type == packet.DATA:
-            self.files[p.file_id].write_chunk(p.seq_num, p.data)
+            if p.data != "":
+                self.files[p.file_id].write_chunk(p.seq_num, p.data)
+            else:
+                print("ACK eof packet")
+                p2 = packet.Packet(flags=(False, False, True, False, False), file_id=p.file_id) # ACK eof packet
+                self.send_packet(p2, pure_ack=True)
 
         if (p.flags[packet.ACK]):
             rtt, count = self.files[p.file_id].ack_recv(p.ack_num)
