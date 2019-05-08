@@ -150,6 +150,10 @@ class Connection():
                     while len(f.packets_sending) >= self.max_window_size:
                         pass
                     self.send_packet(p)
+                if f.ack_num - f.last_ack_num > 5:
+                    print("len(f.acks_to_send) {}".format(len(f.acks_to_send)))
+                    p = packet.Packet(flags=(False, False, True, False, False), file_id=id)
+                    self.send_packet(p, pure_ack=True)
 
     def send_packet(self, p, pure_ack=False):
        # self.window_cond.acquire()
@@ -157,7 +161,6 @@ class Connection():
        # while self.curr_window_size >= self.max_window_size:
        #     self.window_cond.wait()
        # self.window_cond.release()
-        print(self.files)
         if p.seq_num == 0 and not pure_ack:
             p.seq_num = self.files[p.file_id].get_next_seq_num()
          #   self.inc_curr_window_size()

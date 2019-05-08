@@ -10,7 +10,7 @@ class Receiver(threading.Thread):
         self.queue = queue
         self.connections = connections
         self.socket = sock
-        
+
     def run(self):
         while True:
             data, addr = self.socket.recvfrom(1024)

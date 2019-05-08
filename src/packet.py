@@ -1,4 +1,4 @@
-        # Type constants
+# Type constants
 GET=0
 PUT=1
 DATA=2
@@ -39,8 +39,6 @@ class Packet:
                 + self.get_checksum().to_bytes(2, byteorder='big')
                 + bytes(self.data, 'iso-8859-15'))
 
-
-
 def extract(char, rshift, mask):
     return (char >> rshift) & mask
 
@@ -61,4 +59,3 @@ def decode(data):
                   (bool(syn), bool(fin), bool(ack), bool(nack), bool(error)),
                   file_id, int.from_bytes(seq_num, byteorder='big'), int.from_bytes(ack_num, byteorder='big'),
                   payload)
-

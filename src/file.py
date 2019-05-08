@@ -14,6 +14,7 @@ class File:
         self.file_id = file_id
         self.operation = operation
         self.seq_num = 1
+        self.last_ack_num = 0
         self.ack_num = 0
         self.packets_sending = []
         self.acks_to_send = []
@@ -42,6 +43,7 @@ class File:
         return s
 
     def get_ack_num(self):
+        self.last_ack_num = self.ack_num
         return self.ack_num
 
     def get_next_chunk(self):
@@ -61,14 +63,14 @@ class File:
                 print("chunk_seq_num: {}".format(s))
                 if s == self.chunk_num + 1:
                     self.file.write(c)
+                    self.file.flush()
+                    os.fsync(self.file.fileno())
                     self.chunk_num += 1
                     self.chunks_to_write.remove((s, c))
                 elif s <= self.chunk_num:
                     self.chunks_to_write.remove((s, c))
                 else:
                     break
-            self.file.flush()
-            os.fsync(self.file.fileno())
 
     def ack_send(self, ack_num):
         if self.ack_num >= ack_num:
