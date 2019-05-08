@@ -32,7 +32,7 @@ class Connection():
         self.files = { 0 : file.File(self, 0, None, None) }
 
         self.window_cond = threading.Condition()
-        self.max_window_size = 50
+        self.max_window_size = 10
         self.curr_window_size = 0
 
     def __repr__(self):
@@ -48,6 +48,11 @@ class Connection():
     def receive(self):
         while True:
             p = self.in_queue.get()
+
+            if not p:
+                p2 = packet.Packet(flags=(False, False, False, True, False)) # ACK eof packet
+                self.send_packet(p2, pure_ack=True)
+                continue
 
             if p.type == packet.GET:
                 if p.data == "":
@@ -101,11 +106,10 @@ class Connection():
             if p.data != "":
                 self.files[p.file_id].write_chunk(p.seq_num, p.data)
             else:
-                print("ACK eof packet")
                 p2 = packet.Packet(flags=(False, False, True, False, False), file_id=p.file_id) # ACK eof packet
                 self.send_packet(p2, pure_ack=True)
 
-        if (p.flags[packet.ACK]):
+        if p.flags[packet.ACK]:
             rtt, count = self.files[p.file_id].ack_recv(p.ack_num)
             #self.window_cond.acquire()
             #while self.curr_window_size - count <= 0:
@@ -117,13 +121,24 @@ class Connection():
                 self.rtt_var = (1 - BETA) * self.rtt_var + BETA * abs(self.rtt - rtt)
                 self.rto = max(1, self.rtt + K * self.rtt_var)
             print("rtt: {}; rto: {}".format(self.rtt, self.rto))
-        if (p.flags[packet.SYN]):
+        if p.flags[packet.SYN]:
             self.init()
             if (self.first == False):
                 p2 = packet.Packet(flags=(True, False, True, False, False)) # SYN & ACK
             else:
                 p2 = packet.Packet(flags=(False, False, True, False, False)) # ACK
             self.send_packet(p2)
+        if p.flags[packet.NACK]:
+            most_recent = None
+            for f in self.files.values():
+                # get most recently sent packet from file f
+                if not f.packets_sending: continue
+                f_most_recent = sorted(f.packets_sending, key=lambda x: x[2], reverse=True)[0]
+                if not most_recent or most_recent[2] < f_most_recent[2]:
+                    most_recent = f_most_recent
+            if most_recent:
+                self.send_packet(most_recent[0], pure_ack=True)
+                print("sent packet in response to NACK")
 
     def process_option(self, p, o):
         args = o.split(":")

@@ -116,6 +116,8 @@ class File:
             if t:
                 t.cancel()
         self.file.close()
+        del(self.file)
+        self.file = None
         self.closed = True
         if self.keep_alive_timer:
             self.keep_alive_timer.cancel()
