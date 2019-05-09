@@ -167,7 +167,7 @@ class Connection():
     def process_option(self, p, o):
         args = o.split(":")
         if args[0] == "link_file_id":
-            self.file_id_table[int(args[1])] = p.file_id
+            self.file_id_table[p.file_id] = int(args[1])
         native_id = self.file_id_table[p.file_id]
         if args[0] == "end_of_file":
             self.files[native_id].set_end_of_file(int(args[1]))
