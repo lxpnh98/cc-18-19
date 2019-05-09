@@ -17,6 +17,9 @@ class Connection():
         self.out_queue = q
         self.initialized = False
         self.first = False
+        self.fin_seq = None
+        self.finished = False
+        self.global_timeout = None
 
         # foreign file_id -> native file_id
         self.file_id_table = {0 : 0}
@@ -31,9 +34,7 @@ class Connection():
         self.file_id = 1
         self.files = { 0 : file.File(self, 0, None, None) }
 
-        self.window_cond = threading.Condition()
         self.max_window_size = 10
-        self.curr_window_size = 0
 
     def __repr__(self):
         return "(init: {}, first: {})".format(self.initialized, self.first)
@@ -46,8 +47,19 @@ class Connection():
         threading.Thread(target=self.send).start()
 
     def receive(self):
-        while True:
-            p = self.in_queue.get()
+        time = 60.0
+        self.global_timeout = threading.Timer(time, self.terminate, ())
+        self.global_timeout.start()
+        while not self.finished:
+            try:
+                p = self.in_queue.get(True, 1.0)
+            except queue.Empty:
+                print("packet timeout")
+                continue
+
+            self.global_timeout.cancel()
+            self.global_timeout = threading.Timer(time, self.terminate, ())
+            self.global_timeout.start()
 
             if not p:
                 p2 = packet.Packet(flags=(False, False, False, True, False)) # ACK eof packet
@@ -93,6 +105,7 @@ class Connection():
                 self.packets_for_future_files[p.file_id] = [p]
 
             print("file_id {} seq_num {} type {}".format(p.file_id, p.seq_num, p.type))
+        print("Done Receiving")
 
     def process_packet(self, p):
         if p.seq_num != 0:
@@ -110,6 +123,8 @@ class Connection():
                 self.send_packet(p2, pure_ack=True)
 
         if p.flags[packet.ACK]:
+            if p.ack_num == self.fin_seq:
+                self.terminate()
             rtt, count = self.files[p.file_id].ack_recv(p.ack_num)
             #self.window_cond.acquire()
             #while self.curr_window_size - count <= 0:
@@ -140,6 +155,15 @@ class Connection():
                 self.send_packet(most_recent[0], pure_ack=True)
                 print("sent packet in response to NACK")
 
+        if p.flags[packet.FIN]:
+            if p.flags[packet.ACK]:
+                p2 = packet.Packet(flags=(False, False, True, False, False)) # ACK
+                self.terminate()
+                self.send_packet(p2, pure_ack = True)
+            else:
+                p2 = packet.Packet(flags=(False, True, True, False, False)) # FIN & ACK
+                self.send_packet(p2)
+
     def process_option(self, p, o):
         args = o.split(":")
         if args[0] == "link_file_id":
@@ -156,7 +180,7 @@ class Connection():
         return id
 
     def send(self):
-        while True:
+        while not self.finished:
             for id in self.files.copy():
                 f = self.files[id]
                 if f.closed == True:
@@ -174,6 +198,7 @@ class Connection():
                     print("len(f.acks_to_send) {}".format(len(f.acks_to_send)))
                     p = packet.Packet(flags=(False, False, True, False, False), file_id=id)
                     self.send_packet(p, pure_ack=True)
+        print("Done sending")
 
     def send_packet(self, p, pure_ack=False):
        # self.window_cond.acquire()
@@ -187,7 +212,11 @@ class Connection():
         if p.flags[packet.ACK]:
             p.ack_num = self.files[p.file_id].get_ack_num()
             self.files[p.file_id].cancel_keep_alive_timer()
-            self.files[p.file_id].new_keep_alive_timer(self)
+            if not self.files[p.file_id].closed:
+                self.files[p.file_id].new_keep_alive_timer(self)
+
+        if p.flags[packet.FIN]:
+            self.fin_seq = p.seq_num
         self.out_queue.put((self.dest_addr, p))
         if not pure_ack:
             t = threading.Timer(self.rto, self.send_packet, (p,))
@@ -209,9 +238,12 @@ class Connection():
         p = packet.Packet(packet.PUT, (False,)*5, file_id=id, data=write_path)
         self.send_packet(p)
 
+    def fin_connection(self):
+        p = packet.Packet(flags=(False, True, False, False, False), data="FIN PACKET") # FIN
+        self.send_packet(p)
+
     def init(self):
         self.first_timestamp = time.time()
-        self.files[0].new_keep_alive_timer(self)
         self.initialized = True
 
     def begin(self):
@@ -219,13 +251,7 @@ class Connection():
         p = packet.Packet(flags=(True, False, False, False, False))
         self.send_packet(p)
 
-    def inc_curr_window_size(self):
-        self.window_cond.acquire()
-        self.curr_window_size += 1
-        self.window_cond.release()
-
-    def dec_curr_window_size(self, count=1):
-        self.window_cond.acquire()
-        self.curr_window_size -= count
-        self.window_cond.notify()
-        self.window_cond.release()
+    def terminate(self):
+        for f in self.files.values():
+            f.close()
+        self.finished = True

@@ -37,5 +37,10 @@ while True:
         elif terms[0] == "put":
             if conn:
                 conn.put_file(terms[1], terms[2])
+        elif terms[0] == "fin":
+            if conn:
+                conn.fin_connection()
+                print("\n\nfin started\n\n")
+
     except IndexError:
         print("too few arguments")
