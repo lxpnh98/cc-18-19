@@ -191,21 +191,20 @@ class Connection():
                     p = packet.Packet(packet_type=packet.DATA, file_id=f.file_id, data=d)
                     if len(d) == 0:
                         f.close()
-                    while len(f.packets_sending) >= self.max_window_size:
+                    #while len(f.packets_sending) >= self.max_window_size:
+                    while self.total_packets_sending() >= self.max_window_size:
                         pass
                     self.send_packet(p)
-                if f.ack_num - f.last_ack_num > 5:
+                if f.ack_num - f.last_ack_num > 1:
                     print("len(f.acks_to_send) {}".format(len(f.acks_to_send)))
                     p = packet.Packet(flags=(False, False, True, False, False), file_id=id)
                     self.send_packet(p, pure_ack=True)
         print("Done sending")
 
+    def total_packets_sending(self):
+        return sum([len(f.packets_sending) for f in self.files.values()])
+
     def send_packet(self, p, pure_ack=False):
-       # self.window_cond.acquire()
-       # print("\n count=%d\n",self.curr_window_size)
-       # while self.curr_window_size >= self.max_window_size:
-       #     self.window_cond.wait()
-       # self.window_cond.release()
         if p.seq_num == 0 and not pure_ack:
             p.seq_num = self.files[p.file_id].get_next_seq_num()
          #   self.inc_curr_window_size()
@@ -239,7 +238,7 @@ class Connection():
         self.send_packet(p)
 
     def fin_connection(self):
-        p = packet.Packet(flags=(False, True, False, False, False), data="FIN PACKET") # FIN
+        p = packet.Packet(flags=(False, True, False, False, False)) # FIN
         self.send_packet(p)
 
     def init(self):
