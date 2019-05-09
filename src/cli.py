@@ -1,4 +1,5 @@
 import sys
+import os, signal
 
 from controller import Controller
 
@@ -12,7 +13,9 @@ conf = {
 cc = None
 conn = None
 
-while True:
+done = False
+
+while not done:
     print("> ", end="")
     query = input()
     terms = query.split(" ")
@@ -41,6 +44,10 @@ while True:
             if conn:
                 conn.fin_connection()
                 print("\n\nfin started\n\n")
+        elif terms[0] == "exit":
+            done = True
 
     except IndexError:
         print("too few arguments")
+
+os.kill(0, signal.SIGKILL)
